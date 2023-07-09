@@ -71,7 +71,9 @@ for input_file in "$input_dir"/*.{mov,mp4,avi,mkv}; do
 
     # Encode new proxy file
     # if ! ffmpeg -i "$input_file" -c:v libx265 -preset ultrafast -crf 0 -maxrate $bitrate -bufsize $bufsize -c:a aac -b:a 128k -ar 48000 "$output_file" -loglevel quiet -stats; then
-    if ! ffmpeg -i "$input_file" -c:v libx264 -pix_fmt yuv420p -preset ultrafast -crf 0 -maxrate $bitrate -bufsize $bufsize -c:a aac -b:a 128k -ar 48000 "$output_file" -loglevel quiet -stats; then
+    # if ! ffmpeg -i "$input_file" -c:v libx264 -pix_fmt yuv420p -preset ultrafast -crf 0 -maxrate $bitrate -bufsize $bufsize -c:a aac -b:a 128k -ar 48000 "$output_file" -loglevel quiet -stats; then
+    if ! ffmpeg -i "$input_file" -c:v libx264 -pix_fmt yuv420p -preset ultrafast -crf 0 -maxrate $bitrate -bufsize $bufsize -c:a pcm_s24le -ar 48000 "$output_file" -loglevel quiet -stats
+
         echo "Error encoding file: $input_file"
         mv "$input_file" "$error_dir"
     fi

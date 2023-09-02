@@ -2,11 +2,12 @@
 
 # Usage function to display script usage
 function usage() {
-    echo "Usage: $0 [input directory] [output directory] [bitrate] [bufsize]"
+    echo "Usage: $0 [input directory] [output directory] [bitrate] [bufsize] [--cuda]"
     echo "  input directory: directory containing video files to process"
     echo "  output directory: directory to save processed video files"
     echo "  bitrate: (optional) target bitrate for output files, default is 8M"
     echo "  bufsize: (optional) buffer size for output files, default is 2x bitrate"
+    echo "  --cuda: (optional) use CUDA for GPU-based encoding"
     exit 1
 }
 
@@ -15,11 +16,24 @@ if [ "$#" -lt 2 ]; then
     usage
 fi
 
-# Get command line arguments
+# Initialize CUDA flag to 0
+use_cuda=0
+
+# Get command line arguments and set CUDA flag
+for arg in "$@"; do
+  case $arg in
+    --cuda)
+      use_cuda=1
+      shift
+      ;;
+  esac
+done
+
 input_dir=$1
 output_dir=$2
 bitrate=${3:-8M}
 bufsize=${4:-$(echo $bitrate | sed 's/M//' | awk '{print $1 * 2}')M}
+
 
 # Check if input directory exists
 if [ ! -d "$input_dir" ]; then
@@ -69,15 +83,17 @@ for input_file in "$input_dir"/*.{mov,mp4,avi,mkv}; do
         echo "Enough free space available for: $input_file"
     fi
 
-    # Encode new proxy file
-    # if ! ffmpeg -i "$input_file" -c:v libx265 -preset ultrafast -crf 0 -maxrate $bitrate -bufsize $bufsize -c:a aac -b:a 128k -ar 48000 "$output_file" -loglevel quiet -stats; then
-    # if ! ffmpeg -i "$input_file" -c:v libx264 -pix_fmt yuv420p -preset ultrafast -crf 0 -maxrate $bitrate -bufsize $bufsize -c:a aac -b:a 128k -ar 48000 "$output_file" -loglevel quiet -stats; then
-    # if ! ffmpeg -i "$input_file" -c:v libx264 -pix_fmt yuv420p -preset ultrafast -crf 0 -maxrate $bitrate -bufsize $bufsize -c:a pcm_s24le -ar 48000 "$output_file" -loglevel quiet -stats; then
 
-    if ! ffmpeg -i "$input_file" -c:v libx264 -pix_fmt yuv420p -preset ultrafast -maxrate $bitrate -bufsize $bufsize -c:a pcm_s24le -ar 48000 "$output_file" -loglevel quiet -stats; then
-    # if ! ffmpeg -hwaccel cuda -i "$input_file" -c:v h264_nvenc -pix_fmt yuv420p -preset slow -maxrate $bitrate -bufsize $bufsize -c:a aac -ar 48000 "$output_file" -loglevel quiet -stats; then
+    if [ "$use_cuda" -eq 1 ]; then
+        ffmpeg_command="ffmpeg -hwaccel cuda -i \"$input_file\" -c:v h264_nvenc -pix_fmt yuv420p -preset slow -maxrate $bitrate -bufsize $bufsize -c:a aac -ar 48000 \"$output_file\" -loglevel quiet -stats"
+    else
+        ffmpeg_command="ffmpeg -i \"$input_file\" -c:v libx264 -pix_fmt yuv420p -preset ultrafast -maxrate $bitrate -bufsize $bufsize -c:a pcm_s24le -ar 48000 \"$output_file\" -loglevel quiet -stats"
+    fi
+
+    if ! eval $ffmpeg_command; then
         echo "Error encoding file: $input_file"
         mv "$input_file" "$error_dir"
     fi
+
 done
 

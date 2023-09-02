@@ -85,9 +85,9 @@ for input_file in "$input_dir"/*.{mov,mp4,avi,mkv}; do
 
 
     if [ "$use_cuda" -eq 1 ]; then
-        ffmpeg_command="ffmpeg -hwaccel cuda -i \"$input_file\" -c:v h264_nvenc -pix_fmt yuv420p -preset slow -maxrate $bitrate -bufsize $bufsize -c:a aac -ar 48000 \"$output_file\" -loglevel quiet -stats"
+        ffmpeg_command="ffmpeg -hwaccel cuda -i \"$input_file\" -c:v h264_nvenc -pix_fmt yuv420p -preset slow -maxrate $bitrate -bufsize $bufsize -c:a pcm_s16le -ar 48000 \"$output_file\" -loglevel quiet -stats"
     else
-        ffmpeg_command="ffmpeg -i \"$input_file\" -c:v libx264 -pix_fmt yuv420p -preset ultrafast -maxrate $bitrate -bufsize $bufsize -c:a pcm_s24le -ar 48000 \"$output_file\" -loglevel quiet -stats"
+        ffmpeg_command="ffmpeg -i \"$input_file\" -c:v libx264 -pix_fmt yuv420p -preset ultrafast -maxrate $bitrate -bufsize $bufsize -c:a pcm_s16le -ar 48000 \"$output_file\" -loglevel quiet -stats"
     fi
 
     if ! eval $ffmpeg_command; then
